@@ -138,6 +138,12 @@ export const RetrievalTab: React.FC<RetrievalTabProps> = ({
 
     setIsEvaluating(true);
     try {
+      let aiSettings: any = {};
+      try {
+        const raw = localStorage.getItem('cms_ai_settings_v4');
+        if (raw) aiSettings = JSON.parse(raw);
+      } catch (e) {}
+
       const res = await fetch('/api/evaluate-retrieval', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -149,6 +155,9 @@ export const RetrievalTab: React.FC<RetrievalTabProps> = ({
           studentRecallText: recallText.trim(),
           chapterTitle,
           grade,
+          aiProvider: aiSettings.provider,
+          deepseekApiKey: aiSettings.deepseekApiKey,
+          deepseekModel: aiSettings.deepseekModel,
         }),
       });
 

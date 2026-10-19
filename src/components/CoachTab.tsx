@@ -66,6 +66,12 @@ export const CoachTab: React.FC<CoachTabProps> = ({ chapter, onAddSource }) => {
     setIsLoading(true);
 
     try {
+      let aiSettings: any = {};
+      try {
+        const raw = localStorage.getItem('cms_ai_settings_v4');
+        if (raw) aiSettings = JSON.parse(raw);
+      } catch (e) {}
+
       const res = await fetch('/api/coach-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -76,6 +82,9 @@ export const CoachTab: React.FC<CoachTabProps> = ({ chapter, onAddSource }) => {
           message: text,
           history: messages.slice(-6),
           currentContext: chapter.text || chapter.map?.bigIdea || '',
+          aiProvider: aiSettings.provider,
+          deepseekApiKey: aiSettings.deepseekApiKey,
+          deepseekModel: aiSettings.deepseekModel,
         }),
       });
 

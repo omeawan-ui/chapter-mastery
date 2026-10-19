@@ -12,6 +12,7 @@ import { SpacedReviewTab } from './components/SpacedReviewTab';
 import { PrintCheatSheetModal } from './components/PrintCheatSheetModal';
 import { AddChapterModal } from './components/AddChapterModal';
 import { FocusTimerModal } from './components/FocusTimerModal';
+import { AiSettingsModal, AiSettings } from './components/AiSettingsModal';
 import { Chapter, UserStats, SourceItem, RetrievalRecord } from './types';
 import { initialSampleChapters } from './data/sampleChapters';
 import { playChimeSound } from './utils/audio';
@@ -29,6 +30,7 @@ import {
 
 const STORAGE_KEY_CHAPTERS = 'chapter_mastery_pro_v4';
 const STORAGE_KEY_STATS = 'chapter_mastery_stats_v4';
+const STORAGE_KEY_AI_SETTINGS = 'cms_ai_settings_v4';
 
 export default function App() {
   // Load chapters from local storage or default sample data
@@ -77,6 +79,20 @@ export default function App() {
   const [editingChapter, setEditingChapter] = useState<Chapter | null>(null);
   const [isTimerModalOpen, setIsTimerModalOpen] = useState(false);
   const [isCheatSheetOpen, setIsCheatSheetOpen] = useState(false);
+  const [isAiSettingsOpen, setIsAiSettingsOpen] = useState(false);
+
+  // AI Model Provider & DeepSeek settings
+  const [aiSettings, setAiSettings] = useState<AiSettings>(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY_AI_SETTINGS);
+      if (stored) return JSON.parse(stored);
+    } catch (e) {}
+    return {
+      provider: 'gemini',
+      deepseekApiKey: '',
+      deepseekModel: 'deepseek-chat',
+    };
+  });
 
   // Focus Timer State
   const [timerSeconds, setTimerSeconds] = useState(25 * 60);
@@ -99,6 +115,14 @@ export default function App() {
       console.error('Failed to save stats', e);
     }
   }, [stats]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY_AI_SETTINGS, JSON.stringify(aiSettings));
+    } catch (e) {
+      console.error('Failed to save aiSettings', e);
+    }
+  }, [aiSettings]);
 
   // Pomodoro Timer Interval
   useEffect(() => {
@@ -220,6 +244,9 @@ export default function App() {
           keyWordsUsed: targetQ.keyWordsUsed,
           marks: targetQ.marks,
           studentAnswer,
+          aiProvider: aiSettings.provider,
+          deepseekApiKey: aiSettings.deepseekApiKey,
+          deepseekModel: aiSettings.deepseekModel,
         }),
       });
 
@@ -375,7 +402,12 @@ export default function App() {
     const res = await fetch('/api/generate-kit', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
+      body: JSON.stringify({
+        ...data,
+        aiProvider: aiSettings.provider,
+        deepseekApiKey: aiSettings.deepseekApiKey,
+        deepseekModel: aiSettings.deepseekModel,
+      }),
     });
 
     if (!res.ok) throw new Error('Generation failed');
@@ -472,6 +504,7 @@ export default function App() {
         }}
         onOpenTimerModal={() => setIsTimerModalOpen(true)}
         onOpenCheatSheet={() => setIsCheatSheetOpen(true)}
+        onOpenAiSettings={() => setIsAiSettingsOpen(true)}
         onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
         onOpenReviews={() => {
           setActiveTab('spaced');
@@ -480,6 +513,7 @@ export default function App() {
         isSidebarOpen={isSidebarOpen}
         activeTimerRemaining={activeTimerRemaining}
         hasActiveChapter={!!currentChapter}
+        aiProvider={aiSettings.provider}
       />
 
       {/* Main Layout */}
@@ -629,6 +663,13 @@ export default function App() {
           setTimerSeconds(mins * 60);
         }}
         mode={timerMode}
+      />
+
+      <AiSettingsModal
+        isOpen={isAiSettingsOpen}
+        onClose={() => setIsAiSettingsOpen(false)}
+        settings={aiSettings}
+        onSaveSettings={setAiSettings}
       />
     </div>
   );

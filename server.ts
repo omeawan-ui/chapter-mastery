@@ -2,14 +2,14 @@ import express from 'express';
 import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import dotenv from 'dotenv';
-import { GoogleGenAI, Type } from '@google/genai';
+import { GoogleGenAI } from '@google/genai';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(express.json({ limit: '20mb' }));
+app.use(express.json({ limit: '25mb' }));
 
 // Initialize Gemini SDK with telemetry header per guidelines
 const apiKey = process.env.GEMINI_API_KEY;
@@ -26,21 +26,134 @@ if (apiKey) {
 }
 
 // ------------------------------------------------------------------
+// Unified LLM Caller (supports DeepSeek API & Gemini)
+// ------------------------------------------------------------------
+interface LLMOptions {
+  provider?: 'gemini' | 'deepseek';
+  deepseekApiKey?: string;
+  deepseekModel?: string;
+}
+
+async function executeLLMCall(
+  systemInstruction: string,
+  userPrompt: string,
+  jsonFormat: boolean,
+  options?: LLMOptions
+): Promise<string> {
+  const provider = options?.provider || (options?.deepseekApiKey ? 'deepseek' : 'gemini');
+  const dsKey = options?.deepseekApiKey || process.env.DEEPSEEK_API_KEY;
+  const dsModel = options?.deepseekModel || 'deepseek-chat';
+
+  // 1. If DeepSeek is chosen and a key is available, call DeepSeek API
+  if (provider === 'deepseek' && dsKey) {
+    try {
+      const response = await fetch('https://api.deepseek.com/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${dsKey.trim()}`,
+        },
+        body: JSON.stringify({
+          model: dsModel,
+          temperature: 0.3,
+          response_format: jsonFormat ? { type: 'json_object' } : undefined,
+          messages: [
+            { role: 'system', content: systemInstruction },
+            { role: 'user', content: userPrompt },
+          ],
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const text = data.choices?.[0]?.message?.content || '';
+        if (text) return text.trim();
+      } else {
+        const errJson = await response.json().catch(() => ({}));
+        console.warn('DeepSeek API warning:', errJson.error?.message || response.statusText);
+      }
+    } catch (e: any) {
+      console.warn('DeepSeek request error, attempting Gemini fallback:', e.message);
+    }
+  }
+
+  // 2. Call Google Gemini
+  if (ai) {
+    const response = await ai.models.generateContent({
+      model: 'gemini-3.8-flash',
+      contents: userPrompt,
+      config: {
+        systemInstruction,
+        responseMimeType: jsonFormat ? 'application/json' : undefined,
+        temperature: 0.3,
+      },
+    });
+    return response.text?.trim() || '';
+  }
+
+  throw new Error('No AI service response available');
+}
+
+// ------------------------------------------------------------------
 // Health / Status Check
 // ------------------------------------------------------------------
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
-    hasApiKey: !!process.env.GEMINI_API_KEY,
+    hasGeminiKey: !!process.env.GEMINI_API_KEY,
+    hasEnvDeepSeekKey: !!process.env.DEEPSEEK_API_KEY,
     time: new Date().toISOString(),
   });
+});
+
+// ------------------------------------------------------------------
+// Test DeepSeek API Key Endpoint
+// ------------------------------------------------------------------
+app.post('/api/test-deepseek', async (req, res) => {
+  const { apiKey, model } = req.body;
+  const keyToTest = (apiKey || process.env.DEEPSEEK_API_KEY || '').trim();
+
+  if (!keyToTest) {
+    return res.status(400).json({ error: 'Please enter a DeepSeek API key (sk-...)' });
+  }
+
+  try {
+    const r = await fetch('https://api.deepseek.com/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${keyToTest}`,
+      },
+      body: JSON.stringify({
+        model: model || 'deepseek-chat',
+        max_tokens: 15,
+        messages: [{ role: 'user', content: 'Reply with the word "connected".' }],
+      }),
+    });
+
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      return res.status(400).json({
+        error: err.error?.message || `DeepSeek returned HTTP ${r.status}`,
+      });
+    }
+
+    const data = await r.json();
+    return res.json({
+      success: true,
+      message: data.choices?.[0]?.message?.content || 'Connected successfully!',
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message || 'Failed to connect to DeepSeek API' });
+  }
 });
 
 // ------------------------------------------------------------------
 // 1. Generate Full Chapter Mastery Kit
 // ------------------------------------------------------------------
 app.post('/api/generate-kit', async (req, res) => {
-  const { title, subject, grade, text, depthMode } = req.body;
+  const { title, subject, grade, text, depthMode, aiProvider, deepseekApiKey, deepseekModel } =
+    req.body;
 
   if (!title) {
     return res.status(400).json({ error: 'Chapter title is required' });
@@ -112,23 +225,16 @@ REQUIREMENTS:
    - "true-false" (boolean "answer" and "explanation")`;
 
   try {
-    if (ai) {
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.8-flash',
-        contents: userPrompt,
-        config: {
-          systemInstruction,
-          responseMimeType: 'application/json',
-          temperature: 0.3,
-        },
-      });
+    const rawResult = await executeLLMCall(systemInstruction, userPrompt, true, {
+      provider: aiProvider,
+      deepseekApiKey,
+      deepseekModel,
+    });
 
-      const jsonText = response.text?.trim() || '{}';
-      const parsed = JSON.parse(jsonText);
-      return res.json(parsed);
-    }
+    const parsed = JSON.parse(rawResult);
+    return res.json(parsed);
   } catch (err: any) {
-    console.error('Gemini generation error, falling back to smart generator:', err.message);
+    console.warn('Kit generation error, using fallback:', err.message);
   }
 
   // Fallback generator when offline or no API key
@@ -140,7 +246,16 @@ REQUIREMENTS:
 // 2. Evaluate Student's Written Answer (Active Recall)
 // ------------------------------------------------------------------
 app.post('/api/evaluate-answer', async (req, res) => {
-  const { question, modelAnswer, keyWordsUsed, marks, studentAnswer } = req.body;
+  const {
+    question,
+    modelAnswer,
+    keyWordsUsed,
+    marks,
+    studentAnswer,
+    aiProvider,
+    deepseekApiKey,
+    deepseekModel,
+  } = req.body;
 
   if (!studentAnswer || studentAnswer.trim().length < 5) {
     return res.status(400).json({ error: 'Answer is too short' });
@@ -171,24 +286,24 @@ Return JSON ONLY:
 }`;
 
   try {
-    if (ai) {
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.8-flash',
-        contents: prompt,
-        config: {
-          responseMimeType: 'application/json',
-          temperature: 0.2,
-        },
-      });
+    const rawResult = await executeLLMCall(
+      'You are a school examiner evaluating student answers. Return JSON only.',
+      prompt,
+      true,
+      {
+        provider: aiProvider,
+        deepseekApiKey,
+        deepseekModel,
+      }
+    );
 
-      const parsed = JSON.parse(response.text?.trim() || '{}');
-      return res.json({
-        ...parsed,
-        evaluatedAt: new Date().toISOString(),
-      });
-    }
+    const parsed = JSON.parse(rawResult);
+    return res.json({
+      ...parsed,
+      evaluatedAt: new Date().toISOString(),
+    });
   } catch (err: any) {
-    console.error('Gemini evaluation error:', err.message);
+    console.warn('Evaluation error, using fallback:', err.message);
   }
 
   // Heuristic evaluation fallback
@@ -205,13 +320,16 @@ Return JSON ONLY:
   res.json({
     score,
     maxScore,
-    whatGood: matchedKeywords.length > 0
-      ? `Great job mentioning key terms like ${matchedKeywords.join(', ')}! You expressed clear conceptual understanding.`
-      : 'You articulated a thoughtful response in your own words.',
-    howToImprove: matchedKeywords.length < (keyWordsUsed || []).length
-      ? `Try to explicitly incorporate more precise scientific terms like: ${(keyWordsUsed || []).filter((k: string) => !matchedKeywords.includes(k)).slice(0, 2).join(', ')}.`
-      : 'Include one specific real-world example to make your answer completely watertight.',
-    encouragement: 'Every attempt strengthens neural connections in your brain — keep up the fantastic effort! 🌟',
+    whatGood:
+      matchedKeywords.length > 0
+        ? `Great job mentioning key terms like ${matchedKeywords.join(', ')}! You expressed clear conceptual understanding.`
+        : 'You articulated a thoughtful response in your own words.',
+    howToImprove:
+      matchedKeywords.length < (keyWordsUsed || []).length
+        ? `Try to explicitly incorporate more precise scientific terms like: ${(keyWordsUsed || []).filter((k: string) => !matchedKeywords.includes(k)).slice(0, 2).join(', ')}.`
+        : 'Include one specific real-world example to make your answer completely watertight.',
+    encouragement:
+      'Every attempt strengthens neural connections in your brain — keep up the fantastic effort! 🌟',
     evaluatedAt: new Date().toISOString(),
   });
 });
@@ -228,6 +346,9 @@ app.post('/api/evaluate-retrieval', async (req, res) => {
     studentRecallText,
     chapterTitle,
     grade,
+    aiProvider,
+    deepseekApiKey,
+    deepseekModel,
   } = req.body;
 
   if (!studentRecallText || studentRecallText.trim().length < 5) {
@@ -266,24 +387,24 @@ Return JSON ONLY:
 }`;
 
   try {
-    if (ai) {
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.8-flash',
-        contents: prompt,
-        config: {
-          responseMimeType: 'application/json',
-          temperature: 0.3,
-        },
-      });
+    const rawResult = await executeLLMCall(
+      'You are a cognitive psychologist evaluating retrieval practice. Return JSON only.',
+      prompt,
+      true,
+      {
+        provider: aiProvider,
+        deepseekApiKey,
+        deepseekModel,
+      }
+    );
 
-      const parsed = JSON.parse(response.text?.trim() || '{}');
-      return res.json({
-        ...parsed,
-        evaluatedAt: new Date().toISOString(),
-      });
-    }
+    const parsed = JSON.parse(rawResult);
+    return res.json({
+      ...parsed,
+      evaluatedAt: new Date().toISOString(),
+    });
   } catch (err: any) {
-    console.error('Gemini retrieval evaluation error:', err.message);
+    console.warn('Retrieval evaluation error, using fallback:', err.message);
   }
 
   // Fallback heuristic evaluation
@@ -292,8 +413,8 @@ Return JSON ONLY:
   const missed: string[] = [];
 
   (expectedPoints || []).forEach((pt: string) => {
-    const keyTerms = pt.toLowerCase().split(/\s+/).filter((w: string) => w.length > 4);
-    const hasOverlap = keyTerms.some((kt: string) => studentRecallText.toLowerCase().includes(kt));
+    const keyTerms = pt.toLowerCase().split(/\s+/).filter((w) => w.length > 4);
+    const hasOverlap = keyTerms.some((kt) => studentRecallText.toLowerCase().includes(kt));
     if (hasOverlap) {
       foundPoints.push(pt.slice(0, 65));
     } else {
@@ -338,10 +459,20 @@ Return JSON ONLY:
 });
 
 // ------------------------------------------------------------------
-// 3. Socratic Study Coach Chat (Sparky)
+// 4. Socratic Study Coach Chat (Sparky)
 // ------------------------------------------------------------------
 app.post('/api/coach-chat', async (req, res) => {
-  const { chapterTitle, subject, grade, message, history, currentContext } = req.body;
+  const {
+    chapterTitle,
+    subject,
+    grade,
+    message,
+    history,
+    currentContext,
+    aiProvider,
+    deepseekApiKey,
+    deepseekModel,
+  } = req.body;
 
   const systemInstruction = `You are "Sparky", a friendly, witty, and highly supportive Socratic study coach for a Grade ${grade || 6} student.
 You are STRICTLY LOCKED to studying the chapter: "${chapterTitle}" in ${subject || 'General'}.
@@ -372,22 +503,16 @@ Student just said:
 "${message}"`;
 
   try {
-    if (ai) {
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.8-flash',
-        contents: chatContents,
-        config: {
-          systemInstruction,
-          responseMimeType: 'application/json',
-          temperature: 0.5,
-        },
-      });
+    const rawResult = await executeLLMCall(systemInstruction, chatContents, true, {
+      provider: aiProvider,
+      deepseekApiKey,
+      deepseekModel,
+    });
 
-      const parsed = JSON.parse(response.text?.trim() || '{}');
-      return res.json(parsed);
-    }
+    const parsed = JSON.parse(rawResult);
+    return res.json(parsed);
   } catch (err: any) {
-    console.error('Gemini coach chat error:', err.message);
+    console.warn('Coach chat error, using fallback:', err.message);
   }
 
   // Fallback response
@@ -396,13 +521,13 @@ Student just said:
     quickQuestions: [
       `Give me a simple analogy for this`,
       `Test me with a quick question!`,
-      `What is the most important exam point here?`
+      `What is the most important exam point here?`,
     ],
   });
 });
 
 // ------------------------------------------------------------------
-// 4. Parse Web URL Text (Safe proxy)
+// 5. Parse Web URL Text (Safe proxy)
 // ------------------------------------------------------------------
 app.post('/api/parse-url', async (req, res) => {
   const { url } = req.body;
@@ -445,7 +570,13 @@ app.post('/api/parse-url', async (req, res) => {
 });
 
 // Helper for fallback kit generation
-function generateFallbackKit(title: string, subject: string, grade: number, text: string, isInDepth: boolean) {
+function generateFallbackKit(
+  title: string,
+  subject: string,
+  grade: number,
+  text: string,
+  isInDepth: boolean
+) {
   const cleanTitle = title || 'Chapter Mastery';
   return {
     map: {
@@ -458,7 +589,7 @@ function generateFallbackKit(title: string, subject: string, grade: number, text
         `Master the foundational definitions and scope of ${cleanTitle}`,
         `Understand the step-by-step mechanisms and causes`,
         `Apply knowledge to solve standard exam problems and reasoning questions`,
-        `Connect these principles to real-world scenarios`
+        `Connect these principles to real-world scenarios`,
       ],
       estimatedStudyMinutes: isInDepth ? 25 : 15,
       branches: [
@@ -470,12 +601,12 @@ function generateFallbackKit(title: string, subject: string, grade: number, text
           subPoints: [
             `Core definitions and background principles governing ${cleanTitle}.`,
             `Key factors that trigger or influence this phenomenon.`,
-            `Why this concept is essential to ${subject}.`
+            `Why this concept is essential to ${subject}.`,
           ],
           keyTakeaways: [
             `Foundations establish the vocabulary and laws.`,
-            `Every major mechanism relies on these baseline rules.`
-          ]
+            `Every major mechanism relies on these baseline rules.`,
+          ],
         },
         {
           id: 'b2',
@@ -485,12 +616,12 @@ function generateFallbackKit(title: string, subject: string, grade: number, text
           subPoints: [
             'Sequential progression from cause to effect.',
             'Crucial reactions, interactions, or structural functions.',
-            'How energy, materials, or information flow through the system.'
+            'How energy, materials, or information flow through the system.',
           ],
           keyTakeaways: [
             'Process flows sequentially from inputs to outputs.',
-            'Small changes in conditions lead to observable effects.'
-          ]
+            'Small changes in conditions lead to observable effects.',
+          ],
         },
         {
           id: 'b3',
@@ -500,12 +631,12 @@ function generateFallbackKit(title: string, subject: string, grade: number, text
           subPoints: [
             'Everyday examples where this concept is clearly visible.',
             'Scientific, historical, or environmental significance.',
-            'How scientists or researchers verify these principles.'
+            'How scientists or researchers verify these principles.',
           ],
           keyTakeaways: [
             'Directly observable in natural and human-engineered systems.',
-            'Crucial for answering exam application questions.'
-          ]
+            'Crucial for answering exam application questions.',
+          ],
         },
         {
           id: 'b4',
@@ -515,13 +646,13 @@ function generateFallbackKit(title: string, subject: string, grade: number, text
           subPoints: [
             'Most commonly tested questions in school board exams.',
             'Frequent misconceptions students make and how to avoid them.',
-            'Quick formula or mental checklist for full marks.'
+            'Quick formula or mental checklist for full marks.',
           ],
           keyTakeaways: [
             'Always define keywords before explaining mechanisms.',
-            'Review key vocabulary terms during final exam revision.'
-          ]
-        }
+            'Review key vocabulary terms during final exam revision.',
+          ],
+        },
       ]
     },
     keywords: [
@@ -532,7 +663,7 @@ function generateFallbackKit(title: string, subject: string, grade: number, text
         childMeaning: `The primary concept or central force in ${cleanTitle}.`,
         example: `We study how ${cleanTitle.split(' ')[0]} works in daily life.`,
         memoryHook: `Remember the root word to instantly recall the definition!`,
-        spellingTip: `Break down the syllables carefully.`
+        spellingTip: `Break down the syllables carefully.`,
       },
       {
         id: 'k2',
@@ -541,7 +672,7 @@ function generateFallbackKit(title: string, subject: string, grade: number, text
         childMeaning: 'The step-by-step way a system works or produces results.',
         example: 'Understanding the mechanism helps explain why changes occur.',
         memoryHook: 'Mechanism = Machine parts working together!',
-        spellingTip: 'M - E - C - H - A - N - I - S - M.'
+        spellingTip: 'M - E - C - H - A - N - I - S - M.',
       },
       {
         id: 'k3',
@@ -550,7 +681,7 @@ function generateFallbackKit(title: string, subject: string, grade: number, text
         childMeaning: 'A state of steady balance where opposing forces are equal.',
         example: 'Natural cycles seek equilibrium over time.',
         memoryHook: 'EQUAL balance = Equilibrium!',
-        spellingTip: 'E-Q-U-I-L-I-B-R-I-U-M.'
+        spellingTip: 'E-Q-U-I-L-I-B-R-I-U-M.',
       },
       {
         id: 'k4',
@@ -559,8 +690,8 @@ function generateFallbackKit(title: string, subject: string, grade: number, text
         childMeaning: 'An educated guess or testable scientific explanation.',
         example: 'Students formulated a hypothesis before running the test.',
         memoryHook: 'Hypo (under) + thesis (statement) = testable idea!',
-        spellingTip: 'H-Y-P-O-T-H-E-S-I-S.'
-      }
+        spellingTip: 'H-Y-P-O-T-H-E-S-I-S.',
+      },
     ],
     questions: [
       {
@@ -569,7 +700,7 @@ function generateFallbackKit(title: string, subject: string, grade: number, text
         question: `What is the primary significance of ${cleanTitle} in ${subject}?`,
         modelAnswer: `${cleanTitle} establishes the core mechanisms and principles that govern how systems behave in ${subject}. It connects foundational observations with predictable real-world outcomes.`,
         keyWordsUsed: ['principles', 'mechanisms', 'system', 'outcomes'],
-        marks: 2
+        marks: 2,
       },
       {
         id: 'q2',
@@ -577,8 +708,8 @@ function generateFallbackKit(title: string, subject: string, grade: number, text
         question: `Explain how a change in starting conditions affects the outcome of ${cleanTitle}.`,
         modelAnswer: `When starting conditions change, the balance of the system shifts according to governing laws, resulting in altered rates of reaction, structural adjustments, or different final observations.`,
         keyWordsUsed: ['conditions', 'balance', 'governing laws', 'observations'],
-        marks: 3
-      }
+        marks: 3,
+      },
     ],
     quiz: [
       {
@@ -589,26 +720,27 @@ function generateFallbackKit(title: string, subject: string, grade: number, text
           `It operates under random chance with no observable laws`,
           `It follows consistent principles connecting causes with outcomes`,
           `It only occurs in artificial laboratories and never in nature`,
-          `It has no relevance to modern science`
+          `It has no relevance to modern science`,
         ],
         correctIndex: 1,
-        explanation: 'Scientific and academic principles follow consistent, observable laws that explain cause-and-effect relationships.'
+        explanation:
+          'Scientific and academic principles follow consistent, observable laws that explain cause-and-effect relationships.',
       },
       {
         id: 'qz2',
         type: 'true-false',
         question: `Understanding core vocabulary is essential before answering multi-mark exam questions.`,
         answer: true,
-        explanation: 'True! Examiners award marks for accurate use of specific curriculum terminology.'
+        explanation: 'True! Examiners award marks for accurate use of specific curriculum terminology.',
       },
       {
         id: 'qz3',
         type: 'fill-blank',
         question: `A step-by-step sequence of events that explains how a phenomenon occurs is called a ______.`,
         answer: 'mechanism',
-        explanation: 'A mechanism describes the exact stages and interactions that produce an observed result.'
-      }
-    ]
+        explanation: 'A mechanism describes the exact stages and interactions that produce an observed result.',
+      },
+    ],
   };
 }
 

@@ -8,6 +8,7 @@ import {
   Menu,
   Sparkles,
   Bell,
+  Cpu,
 } from 'lucide-react';
 import { UserStats } from '../types';
 
@@ -17,11 +18,13 @@ interface NavbarProps {
   onOpenAddModal: () => void;
   onOpenTimerModal: () => void;
   onOpenCheatSheet: () => void;
+  onOpenAiSettings: () => void;
   onToggleSidebar: () => void;
   onOpenReviews: () => void;
   isSidebarOpen: boolean;
   activeTimerRemaining?: string;
   hasActiveChapter: boolean;
+  aiProvider?: 'gemini' | 'deepseek';
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -30,10 +33,12 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenAddModal,
   onOpenTimerModal,
   onOpenCheatSheet,
+  onOpenAiSettings,
   onToggleSidebar,
   onOpenReviews,
   activeTimerRemaining,
   hasActiveChapter,
+  aiProvider = 'gemini',
 }) => {
   return (
     <header className="sticky top-0 z-30 bg-slate-900 text-white border-b border-slate-800 shadow-md">
@@ -118,6 +123,22 @@ export const Navbar: React.FC<NavbarProps> = ({
             <Clock className="w-3.5 h-3.5" />
             <span className="font-mono font-semibold">
               {activeTimerRemaining || 'Timer'}
+            </span>
+          </button>
+
+          {/* AI Settings / DeepSeek Button */}
+          <button
+            onClick={onOpenAiSettings}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition ${
+              aiProvider === 'deepseek'
+                ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40'
+                : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700 hover:text-white'
+            }`}
+            title="AI Engine & DeepSeek Key Settings"
+          >
+            <Cpu className="w-3.5 h-3.5 text-teal-400" />
+            <span className="hidden sm:inline">
+              {aiProvider === 'deepseek' ? 'DeepSeek' : 'AI Model'}
             </span>
           </button>
 
