@@ -53,17 +53,55 @@ export const AiSettingsModal: React.FC<AiSettingsModalProps> = ({
     setTestResult(null);
 
     try {
-      const res = await fetch('/api/test-deepseek', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          apiKey: deepseekApiKey.trim(),
-          model: deepseekModel,
-        }),
-      });
+      // 1. Try server proxy route
+      let verified = false;
+      let errorMsg = '';
 
-      const data = await res.json();
-      if (res.ok && data.success) {
+      try {
+        const res = await fetch('/api/test-deepseek', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            apiKey: deepseekApiKey.trim(),
+            model: deepseekModel,
+          }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success) verified = true;
+        } else {
+          const err = await res.json().catch(() => ({}));
+          errorMsg = err.error || '';
+        }
+      } catch (err) {
+        // Backend not running (e.g. static host on Vercel)
+      }
+
+      // 2. If backend didn't verify, test directly from browser via CORS
+      if (!verified) {
+        const directRes = await fetch('https://api.deepseek.com/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${deepseekApiKey.trim()}`,
+          },
+          body: JSON.stringify({
+            model: deepseekModel || 'deepseek-chat',
+            max_tokens: 10,
+            messages: [{ role: 'user', content: 'Say "connected"' }],
+          }),
+        });
+
+        if (directRes.ok) {
+          verified = true;
+        } else {
+          const dErr = await directRes.json().catch(() => ({}));
+          errorMsg = dErr.error?.message || `HTTP ${directRes.status}`;
+        }
+      }
+
+      if (verified) {
         setTestResult({
           success: true,
           message: '✓ Successfully connected to DeepSeek API!',
@@ -71,7 +109,7 @@ export const AiSettingsModal: React.FC<AiSettingsModalProps> = ({
       } else {
         setTestResult({
           success: false,
-          message: data.error || 'Connection failed. Please verify your key.',
+          message: errorMsg || 'Connection failed. Please check your API key.',
         });
       }
     } catch (e: any) {

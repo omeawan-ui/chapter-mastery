@@ -15,6 +15,7 @@ import { FocusTimerModal } from './components/FocusTimerModal';
 import { AiSettingsModal, AiSettings } from './components/AiSettingsModal';
 import { Chapter, UserStats, SourceItem, RetrievalRecord } from './types';
 import { initialSampleChapters } from './data/sampleChapters';
+import { generateStudyKit, evaluateStudentAnswer } from './services/aiService';
 import { playChimeSound } from './utils/audio';
 import {
   BookOpen,
@@ -235,23 +236,17 @@ export default function App() {
     if (!targetQ) return;
 
     try {
-      const res = await fetch('/api/evaluate-answer', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const evalData = await evaluateStudentAnswer(
+        {
           question: targetQ.question,
           modelAnswer: targetQ.modelAnswer,
           keyWordsUsed: targetQ.keyWordsUsed,
           marks: targetQ.marks,
           studentAnswer,
-          aiProvider: aiSettings.provider,
-          deepseekApiKey: aiSettings.deepseekApiKey,
-          deepseekModel: aiSettings.deepseekModel,
-        }),
-      });
-
-      if (!res.ok) throw new Error('Evaluation failed');
-      const evalData = await res.json();
+        },
+        aiSettings,
+        currentChapter.grade
+      );
 
       const updatedQuestions = currentChapter.questions.map((q) =>
         q.id === questionId ? { ...q, studentAnswer, evaluation: evalData } : q
@@ -399,19 +394,7 @@ export default function App() {
     depthMode: 'in-depth' | 'on-the-go';
     sources: SourceItem[];
   }) => {
-    const res = await fetch('/api/generate-kit', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...data,
-        aiProvider: aiSettings.provider,
-        deepseekApiKey: aiSettings.deepseekApiKey,
-        deepseekModel: aiSettings.deepseekModel,
-      }),
-    });
-
-    if (!res.ok) throw new Error('Generation failed');
-    const kit = await res.json();
+    const kit = await generateStudyKit(data, aiSettings);
 
     const now = new Date();
     const reviewDates = [2, 3, 7, 21].map((d) => {
