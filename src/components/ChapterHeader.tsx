@@ -82,6 +82,26 @@ export const ChapterHeader: React.FC<ChapterHeaderProps> = ({
                 Grade {chapter.grade} • {chapter.subject}
               </span>
 
+              {chapter.difficultyLevel && (
+                <span
+                  className={`text-[11px] font-extrabold px-2.5 py-0.5 rounded-full border flex items-center gap-1 ${
+                    chapter.difficultyLevel === 'easy'
+                      ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                      : chapter.difficultyLevel === 'hard'
+                      ? 'bg-indigo-50 text-indigo-800 border-indigo-200'
+                      : 'bg-teal-50 text-teal-800 border-teal-200'
+                  }`}
+                >
+                  <span>
+                    {chapter.difficultyLevel === 'easy'
+                      ? '🌱 Foundational'
+                      : chapter.difficultyLevel === 'hard'
+                      ? '🚀 Advanced'
+                      : '⚖️ Standard'}
+                  </span>
+                </span>
+              )}
+
               {countdown && (
                 <span className="flex items-center gap-1 text-[11px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 rounded-full">
                   <Calendar className="w-3 h-3" />

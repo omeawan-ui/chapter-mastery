@@ -6,6 +6,7 @@ export const initialSampleChapters: Chapter[] = [
     title: 'The Water Cycle & Weather Systems',
     subject: 'Science',
     grade: 6,
+    difficultyLevel: 'standard',
     examDate: '2026-11-15',
     dateAdded: '2026-10-15T08:00:00.000Z',
     lastStudied: '2026-10-18T14:30:00.000Z',
@@ -40,34 +41,99 @@ export const initialSampleChapters: Chapter[] = [
         'Understand why total freshwater on Earth remains conserved'
       ],
       estimatedStudyMinutes: 25,
+      overallDiagram: {
+        type: 'cycle',
+        title: 'The Continuous Hydrologic Closed Cycle',
+        caption: 'Solar energy evaporates water into the skies, forming clouds that rain back down onto mountains and oceans.',
+        steps: [
+          { label: 'Evaporation', desc: 'Solar radiation warms oceans and lakes, turning liquid water into invisible vapor.', emoji: '☀️', color: '#0284c7' },
+          { label: 'Transpiration', desc: 'Plants release moisture into the atmosphere through microscopic leaf stomata.', emoji: '🌿', color: '#10b981' },
+          { label: 'Condensation', desc: 'Rising vapor cools at high altitude and condenses onto dust nuclei to form clouds.', emoji: '☁️', color: '#6366f1' },
+          { label: 'Precipitation', desc: 'Heavy droplets fall as rain, snow, or hail due to gravity.', emoji: '🌧️', color: '#3b82f6' },
+          { label: 'Collection & Runoff', desc: 'Water drains into rivers and percolates into underground aquifers back to oceans.', emoji: '🌊', color: '#0d9488' },
+        ],
+      },
+      recommendedVideos: [
+        {
+          title: 'The Water Cycle: Collection, Condensation & Precipitation',
+          channel: 'Crash Course Kids',
+          duration: '4:15',
+          youtubeUrl: 'https://www.youtube.com/results?search_query=the+water+cycle+crash+course+kids',
+          whyWatch: 'Engaging, colorful visual animations demonstrating the solar engine and closed-loop conservation.',
+        },
+        {
+          title: 'How Clouds Form & Why It Rains',
+          channel: 'SciShow Kids',
+          duration: '5:30',
+          youtubeUrl: 'https://www.youtube.com/results?search_query=how+clouds+form+scishow',
+          whyWatch: 'Step-by-step breakdown of condensation nuclei and dew point temperatures with lab demonstrations.',
+        },
+      ],
       branches: [
         {
           id: 'b1',
           branchName: 'The Solar Engine & Evaporation',
           branchEmoji: '☀️',
-          analogy: 'Like puddles vanishing after rain when the hot midday sun bakes the sidewalk.',
+          analogy: 'Imagine you leave a shallow bowl of water out on your front porch on a hot, sunny afternoon. By evening, the bowl is completely dry, even though nobody spilled a drop! The bright sun gave the water molecules so much heat energy that they broke free and floated up into the air as invisible gas. That exact same magic happens every minute across our massive oceans!',
           subPoints: [
             'Solar thermal radiation heats surface water molecules in oceans, rivers, and lakes.',
             'Heated molecules gain kinetic energy and break intermolecular bonds, turning into invisible water vapor.',
             'Oceans contribute over 85% of global evaporated water vapor into the atmosphere.',
             'Higher temperatures and windy conditions accelerate the rate of evaporation.'
           ],
+          realLifeExamples: [
+            'In your bathroom: a wet bath towel hanging on a hook dries overnight because moisture quietly evaporates into the bedroom air.',
+            'On the road: shallow rain puddles on the dark black asphalt disappear quickly under bright morning sunshine.',
+            'Cooking in the kitchen: boiling soup on a hot stove releases gentle steam that lifts up toward the ceiling.'
+          ],
+          mechanisms: [
+            {
+              concept: 'Solar Kinetic Activation',
+              explanation: 'Heat energy from sunlight speeds up water molecules until they have enough energy to break free from liquid bonds.',
+              realLifeExample: 'Sweat cooling your skin as it evaporates after running in gym class.',
+              emoji: '☀️'
+            }
+          ],
           keyTakeaways: [
             'The Sun is the indispensable power source of the hydrologic cycle.',
             'Evaporation converts liquid water into gaseous water vapor.',
             'Oceans are the primary reservoir driving global water vapor supply.'
-          ]
+          ],
+          diagram: {
+            type: 'flow',
+            title: 'Solar Thermal Evaporation Mechanics',
+            caption: 'How thermal energy breaks intermolecular bonds to lift water vapor into the troposphere.',
+            steps: [
+              { label: 'Solar Absorption', desc: 'Sunlight penetrates surface water layers and raises thermal energy.', emoji: '☀️' },
+              { label: 'Kinetic Activation', desc: 'Molecules accelerate and gain escape velocity from liquid bonds.', emoji: '⚡' },
+              { label: 'Phase Change', desc: 'Liquid water transforms into invisible, buoyant gaseous water vapor.', emoji: '💨' },
+              { label: 'Atmospheric Ascent', desc: 'Warm moist air rises into the lower troposphere.', emoji: '☁️' },
+            ],
+          },
         },
         {
           id: 'b2',
           branchName: 'Transpiration from Plants',
           branchEmoji: '🌿',
-          analogy: 'Like plants "sweating" water vapor through tiny invisible mouth-like pores after drinking from soil.',
+          analogy: 'Think of a tall leafy tree like a gigantic drinking straw! Its deep roots suck cool water from underground soil, pulling it up through the trunk. When the leaves open tiny microscopic windows called stomata to catch sunlight, extra water vapor gently slips out into the sky like plant breathing.',
           subPoints: [
             'Roots absorb water and dissolved soil minerals, transporting them up stems via xylem vessels.',
             'Microscopic leaf pores called stomata open for photosynthesis gas exchange and release water vapor.',
             'A single large mature tree can transpire hundreds of gallons of water on a dry, sunny day.',
             'Combined evaporation and plant transpiration is scientifically termed evapotranspiration.'
+          ],
+          realLifeExamples: [
+            'Houseplants: if you wrap a clear plastic zip bag around a green houseplant leaf in the sun, misty water droplets quickly coat the inside of the bag.',
+            'Walking into a dense forest: notice how pleasantly cool and fresh the air feels under the canopy—that is trees constantly releasing cool moisture!',
+            'Morning grass: dew forming on blades of grass as plant moisture meets cool dawn air.'
+          ],
+          mechanisms: [
+            {
+              concept: 'Transpirational Upward Pull',
+              explanation: 'As water molecules evaporate from leaf pores, they pull neighboring water molecules behind them up the stem like links in a chain.',
+              realLifeExample: 'Drinking milk through a straw—suction at the top pulls the entire liquid column upward.',
+              emoji: '🌿'
+            }
           ],
           keyTakeaways: [
             'Stomata on leaf surfaces release water vapor into the air.',
@@ -79,12 +145,25 @@ export const initialSampleChapters: Chapter[] = [
           id: 'b3',
           branchName: 'Condensation & Cloud Birth',
           branchEmoji: '☁️',
-          analogy: 'Like cold drops of water forming on the outside of a chilled soda can on a warm summer day.',
+          analogy: 'Imagine drinking an ice-cold can of soda on a hot, humid summer day: within seconds, shiny beads of cold water appear on the outside of the can, even though the metal can has zero holes! That is warm, invisible water vapor in the air bumping into the chilly can and instantly shivering back into liquid drops. High in the cold sky, this exact process turns vapor into fluffy white clouds!',
           subPoints: [
             'Warm, low-density air carrying water vapor rises into higher atmospheric layers where pressure and temperature drop.',
             'Cooling vapor slows down and condenses back into liquid or microscopic ice crystals.',
             'Condensation requires aerosol "cloud condensation nuclei" such as dust, sea salt, or smoke particles.',
             'Billions of clustered suspended droplets form visible clouds and ground-level fog.'
+          ],
+          realLifeExamples: [
+            'Bathroom mirror: steamy fog clouding the bathroom mirror while you take a warm shower because the glass is cooler than the air.',
+            'Winter breath: seeing your breath make little white clouds in cold December air.',
+            'Eyeglasses fogging: stepping out of an air-conditioned car into a humid summer day and your glasses instantly misting over.'
+          ],
+          mechanisms: [
+            {
+              concept: 'Dew Point Saturation',
+              explanation: 'When warm air chills to its dew point, it can no longer hold moisture as gas, forcing droplets to cling onto tiny floating dust specks.',
+              realLifeExample: 'Cloud forming around a mountain peak when ocean breeze gets pushed up into cold mountain air.',
+              emoji: '☁️'
+            }
           ],
           keyTakeaways: [
             'Condensation is the exact reverse of evaporation (gas to liquid).',
@@ -96,12 +175,25 @@ export const initialSampleChapters: Chapter[] = [
           id: 'b4',
           branchName: 'Precipitation & Gravity',
           branchEmoji: '🌧️',
-          analogy: 'Like water collecting in a sponge until it gets so heavy that it can no longer hold the water and drips out.',
+          analogy: 'Think of holding a dry kitchen sponge while someone slowly adds water to it with an eye-dropper. At first, the sponge easily holds every drop. But as more water gathers, the sponge gets heavier and heavier until it simply cannot hold another drop—and water starts dripping down! Inside a cloud, tiny drops merge together until they are too heavy for the rising air currents, and gravity pulls them down to earth as rain!',
           subPoints: [
             'Inside turbulent clouds, droplets bump into each other (coalescence) and merge into larger, heavier drops.',
             'Once upward updraft winds can no longer support their weight, gravity pulls them down.',
             'Forms vary depending on atmosphere temperature: rain (liquid), snow (crystalline), sleet (ice pellets), or hail (layered frozen balls).',
             'Precipitation redistributes freshwater from skies onto mountains, forests, and farms.'
+          ],
+          realLifeExamples: [
+            'Watching raindrops race down a car window: notice how small droplets collide into bigger ones and suddenly zoom downward under gravity.',
+            'Snowflakes on a coat: delicate frozen ice crystals forming when cloud temperatures are below freezing point (0°C / 32°F).',
+            'Hail bouncing on the driveway: frozen layered ice balls formed when strong thunderstorm updrafts toss droplets up and down into freezing air.'
+          ],
+          mechanisms: [
+            {
+              concept: 'Coalescence & Gravitational Downfall',
+              explanation: 'Tiny microscopic cloud droplets collide and combine into heavy raindrops that overcome atmospheric updrafts.',
+              realLifeExample: 'Two water drops on a glass table sliding together to snap into one larger, heavy drop.',
+              emoji: '🌧️'
+            }
           ],
           keyTakeaways: [
             'Precipitation occurs when droplets grow too heavy for cloud updrafts.',
@@ -113,12 +205,25 @@ export const initialSampleChapters: Chapter[] = [
           id: 'b5',
           branchName: 'Collection, Runoff & Underground Aquifers',
           branchEmoji: '🏞️',
-          analogy: 'Like water flowing down a sloped driveway into the gutter, while some seeps into the lawn soil beneath.',
+          analogy: 'Imagine spilling water on a sloping driveway next to a grassy lawn: part of the water races down the concrete into the street gutter, while the rest sinks deeply into the soft soil and grassroots like water into a giant hidden sponge! That is how rainwater either runs off into rivers or recharges deep underground water wells that whole towns drink from.',
           subPoints: [
             'Surface runoff travels over land surfaces into creeks, rivers, and ultimately returns to seas.',
             'Infiltration allows water to soak downward through porous soil layers and rock crevices.',
             'Percolating water recharges groundwater reservoirs and natural aquifers.',
             'Groundwater feeds mountain springs, wells, and helps sustain river flow during dry spells.'
+          ],
+          realLifeExamples: [
+            'Street gutters during a thunderstorm: rushing streams of water carrying leaves toward storm drains that feed local rivers.',
+            'Pouring water into a potted flower plant: water trickles through the potting soil and drains into the tray beneath—infiltration in miniature!',
+            'Drinking water wells: country homes pumping pure, cool, naturally filtered drinking water from deep underground rock layers.'
+          ],
+          mechanisms: [
+            {
+              concept: 'Infiltration and Soil Filtration',
+              explanation: 'Rainwater percolates through gravel and sand layers, which naturally filter out impurities as it recharges aquifers.',
+              realLifeExample: 'A coffee drip filter: water passes through ground coffee and paper to collect pure liquid below.',
+              emoji: '🏞️'
+            }
           ],
           keyTakeaways: [
             'Runoff flows into open drainage basins and oceans.',

@@ -8,8 +8,11 @@ import {
   Trash2,
   AlertCircle,
   GraduationCap,
+  Flame,
+  Sparkles,
+  Clock,
 } from 'lucide-react';
-import { Chapter } from '../types';
+import { Chapter, StudentProfile, UserStats } from '../types';
 
 interface SidebarProps {
   chapters: Chapter[];
@@ -19,6 +22,11 @@ interface SidebarProps {
   onDeleteChapter: (id: string) => void;
   isOpen: boolean;
   onClose: () => void;
+  activeProfile: StudentProfile | null;
+  onOpenProfileModal: () => void;
+  stats?: UserStats;
+  onOpenTimerModal?: () => void;
+  activeTimerRemaining?: string;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -29,6 +37,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onDeleteChapter,
   isOpen,
   onClose,
+  activeProfile,
+  onOpenProfileModal,
+  stats,
+  onOpenTimerModal,
+  activeTimerRemaining,
 }) => {
   const [search, setSearch] = useState('');
   const [selectedSubject, setSelectedSubject] = useState<string>('All');
@@ -37,6 +50,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const subjects = useMemo(() => {
     const list = Array.from(new Set(chapters.map((c) => c.subject).filter(Boolean)));
     return ['All', ...list.sort()];
+  }, [chapters]);
+
+  // Subject counts
+  const subjectCounts = useMemo(() => {
+    const counts: Record<string, number> = { All: chapters.length };
+    chapters.forEach((c) => {
+      if (c.subject) {
+        counts[c.subject] = (counts[c.subject] || 0) + 1;
+      }
+    });
+    return counts;
   }, [chapters]);
 
   // Filter chapters
@@ -135,8 +159,93 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
         </div>
 
-        {/* Search Bar */}
+        {/* Student Profile Banner */}
         <div className="px-3.5 pt-3">
+          <div className="p-3 bg-gradient-to-r from-slate-900 via-teal-950 to-slate-900 text-white rounded-2xl shadow-xs flex items-center justify-between gap-2 border border-slate-800">
+            <div className="flex items-center gap-2.5 overflow-hidden">
+              <div className="w-8 h-8 rounded-xl bg-teal-500/20 border border-teal-500/40 flex items-center justify-center text-lg shrink-0">
+                {activeProfile?.avatarEmoji || '🎓'}
+              </div>
+              <div className="truncate">
+                <div className="flex items-center gap-1.5 truncate">
+                  <span className="font-extrabold text-xs text-white truncate">
+                    {activeProfile?.name || 'Guest Student'}
+                  </span>
+                  {activeProfile?.grade && (
+                    <span className="text-[10px] font-bold bg-teal-400 text-slate-950 px-1.5 py-0.2 rounded-md shrink-0">
+                      Gr {activeProfile.grade}
+                    </span>
+                  )}
+                </div>
+                <div className="text-[10px] text-teal-300 font-medium">
+                  {chapters.length} Permanent Kit{chapters.length === 1 ? '' : 's'}
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={onOpenProfileModal}
+              className="py-1 px-2 rounded-lg bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 border border-teal-500/40 text-[10px] font-bold transition shrink-0 cursor-pointer"
+              title="Switch or Manage Student Profiles"
+            >
+              Switch
+            </button>
+          </div>
+        </div>
+
+        {/* Study Stats & Focus Timer Widget */}
+        <div className="px-3.5 pt-2.5">
+          <div className="grid grid-cols-3 gap-1.5 p-1.5 bg-slate-50 border border-slate-200/80 rounded-xl">
+            {/* Daily Streak */}
+            <div
+              className="flex flex-col items-center justify-center py-1 px-1 rounded-lg bg-white border border-slate-200/60 shadow-2xs text-center"
+              title="Daily Study Streak"
+            >
+              <div className="flex items-center gap-1 text-orange-500">
+                <Flame className="w-3.5 h-3.5 fill-orange-500" />
+                <span className="text-xs font-black text-slate-800">{stats?.streakDays || 0}</span>
+              </div>
+              <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Streak</span>
+            </div>
+
+            {/* Total Mastery XP */}
+            <div
+              className="flex flex-col items-center justify-center py-1 px-1 rounded-lg bg-white border border-slate-200/60 shadow-2xs text-center"
+              title="Total Mastery Experience Points"
+            >
+              <div className="flex items-center gap-1 text-teal-600">
+                <Sparkles className="w-3.5 h-3.5 text-teal-500" />
+                <span className="text-xs font-black text-slate-800">{stats?.xp || 0}</span>
+              </div>
+              <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">XP</span>
+            </div>
+
+            {/* Focus Pomodoro Timer Button */}
+            <button
+              type="button"
+              onClick={onOpenTimerModal}
+              className={`flex flex-col items-center justify-center py-1 px-1 rounded-lg border shadow-2xs text-center transition cursor-pointer ${
+                activeTimerRemaining
+                  ? 'bg-teal-500/10 border-teal-400 text-teal-700 font-bold'
+                  : 'bg-white hover:bg-slate-100 border-slate-200/60 text-slate-700'
+              }`}
+              title="Open Focus Pomodoro Timer"
+            >
+              <div className="flex items-center gap-1">
+                <Clock className={`w-3.5 h-3.5 ${activeTimerRemaining ? 'text-teal-600 animate-spin' : 'text-slate-500'}`} style={{ animationDuration: '6s' }} />
+                <span className="text-[11px] font-mono font-bold leading-tight">
+                  {activeTimerRemaining || '25:00'}
+                </span>
+              </div>
+              <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">
+                {activeTimerRemaining ? 'Timer' : 'Focus'}
+              </span>
+            </button>
+          </div>
+        </div>
+
+        {/* Search Bar */}
+        <div className="px-3.5 pt-2.5">
           <div className="relative">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
@@ -158,21 +267,33 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         {/* Subject Filter Tabs */}
-        {subjects.length > 2 && (
+        {subjects.length > 1 && (
           <div className="px-3 pt-2.5 pb-1 flex gap-1.5 overflow-x-auto scrollbar-none">
-            {subjects.map((subj) => (
-              <button
-                key={subj}
-                onClick={() => setSelectedSubject(subj)}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap transition ${
-                  selectedSubject === subj
-                    ? 'bg-slate-900 text-white shadow-xs'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                {subj}
-              </button>
-            ))}
+            {subjects.map((subj) => {
+              const count = subjectCounts[subj] || 0;
+              return (
+                <button
+                  key={subj}
+                  onClick={() => setSelectedSubject(subj)}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap transition flex items-center gap-1 cursor-pointer ${
+                    selectedSubject === subj
+                      ? 'bg-slate-900 text-white shadow-xs'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  <span>{subj}</span>
+                  <span
+                    className={`text-[10px] px-1 py-0.2 rounded-full font-extrabold ${
+                      selectedSubject === subj
+                        ? 'bg-teal-400 text-slate-950'
+                        : 'bg-slate-200 text-slate-600'
+                    }`}
+                  >
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         )}
 
@@ -214,9 +335,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2 mb-1.5">
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-teal-700 bg-teal-100/60 px-2 py-0.5 rounded-md">
-                      Grade {ch.grade} · {ch.subject}
-                    </span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-teal-700 bg-teal-100/60 px-2 py-0.5 rounded-md">
+                        Grade {ch.grade} · {ch.subject}
+                      </span>
+                      {ch.difficultyLevel && (
+                        <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-md">
+                          {ch.difficultyLevel === 'easy' ? '🌱 Easy' : ch.difficultyLevel === 'hard' ? '🚀 Adv' : '⚖️ Std'}
+                        </span>
+                      )}
+                    </div>
 
                     <div className="flex items-center gap-1">
                       {due && (

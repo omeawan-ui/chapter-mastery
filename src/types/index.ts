@@ -8,13 +8,47 @@ export interface SourceItem {
   url?: string;
 }
 
+export interface MapDiagramStep {
+  label: string;
+  desc: string;
+  emoji?: string;
+  color?: string;
+}
+
+export interface MapDiagram {
+  type: 'cycle' | 'flow' | 'steps' | 'structure';
+  title: string;
+  caption: string;
+  steps: MapDiagramStep[];
+}
+
+export interface VideoRecommendation {
+  title: string;
+  youtubeId?: string;
+  youtubeUrl: string;
+  channel?: string;
+  duration?: string;
+  whyWatch: string;
+}
+
+export interface BranchMechanism {
+  concept: string;
+  explanation: string;
+  realLifeExample: string;
+  emoji?: string;
+}
+
 export interface MapBranch {
   id: string;
   branchName: string;
   branchEmoji: string;
-  analogy: string;
+  analogy: string; // Descriptive, friendly explainer in simple plain English
   subPoints: string[];
+  realLifeExamples?: string[]; // Concrete daily life examples (kitchen, playground, bike, body, nature)
+  mechanisms?: BranchMechanism[]; // Detailed concept + real-world example
   keyTakeaways: string[];
+  diagram?: MapDiagram;
+  video?: VideoRecommendation;
 }
 
 export interface ChapterMap {
@@ -26,6 +60,9 @@ export interface ChapterMap {
   learningOutcomes: string[];
   estimatedStudyMinutes: number;
   branches: MapBranch[];
+  overallDiagram?: MapDiagram;
+  recommendedVideos?: VideoRecommendation[];
+  realLifeConnections?: string[];
 }
 
 export interface Keyword {
@@ -107,11 +144,15 @@ export interface RetrievalRecord {
   date: string;
 }
 
+export type DifficultyLevel = 'easy' | 'standard' | 'hard';
+
 export interface Chapter {
   id: string;
+  studentId?: string; // ID of student profile this study kit belongs to
   title: string;
   subject: string;
   grade: number;
+  difficultyLevel?: DifficultyLevel;
   examDate?: string;
   dateAdded: string;
   lastStudied?: string;
@@ -127,6 +168,16 @@ export interface Chapter {
   quizScores: number[];
   masteryScore: number;
   xpEarned: number;
+}
+
+export interface StudentProfile {
+  id: string;
+  name: string;
+  grade: number;
+  phoneNumber: string; // Used as student password / login PIN
+  avatarEmoji?: string;
+  createdAt: string;
+  lastLoginAt?: string;
 }
 
 export interface CoachMessage {

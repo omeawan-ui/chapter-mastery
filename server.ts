@@ -152,8 +152,17 @@ app.post('/api/test-deepseek', async (req, res) => {
 // 1. Generate Full Chapter Mastery Kit
 // ------------------------------------------------------------------
 app.post('/api/generate-kit', async (req, res) => {
-  const { title, subject, grade, text, depthMode, aiProvider, deepseekApiKey, deepseekModel } =
-    req.body;
+  const {
+    title,
+    subject,
+    grade,
+    difficultyLevel = 'standard',
+    text,
+    depthMode,
+    aiProvider,
+    deepseekApiKey,
+    deepseekModel,
+  } = req.body;
 
   if (!title) {
     return res.status(400).json({ error: 'Chapter title is required' });
@@ -165,8 +174,16 @@ app.post('/api/generate-kit', async (req, res) => {
   const questionCount = isInDepth ? '5 to 7' : '3 to 4';
   const quizCount = isInDepth ? '8 to 10' : '5 to 6';
 
+  const diffDesc =
+    difficultyLevel === 'easy'
+      ? 'Foundational / Beginner: Gentle pacing, simple vocabulary, everyday analogies, step-by-step clarity for building confidence.'
+      : difficultyLevel === 'hard'
+      ? 'Advanced / Honors / Challenge: Deep technical mechanisms, precise vocabulary, high-order reasoning questions, exam-rigor.'
+      : 'Standard Grade-Level: Balanced curriculum syllabus, standard exam terminology, clear concepts.';
+
   const systemInstruction = `You are the "Chapter Mastery Engine" — a premier instructional designer and master teacher trained in Ausubel's Advance Organizer theory, Cognitive Load Theory, Spaced Repetition, and the Feynman Technique.
 Target Audience: Grade ${grade || 6} school student.
+Difficulty Level: ${difficultyLevel.toUpperCase()} (${diffDesc}).
 Language: Clear, inspiring, age-appropriate English. Use vivid, concrete real-world analogies (especially relatable everyday examples).
 Subject: ${subject || 'General'}.
 You MUST return valid JSON adhering strictly to the requested schema.`;
@@ -175,10 +192,19 @@ You MUST return valid JSON adhering strictly to the requested schema.`;
 CHAPTER: "${title}"
 GRADE: ${grade || 6}
 SUBJECT: ${subject || 'General'}
+DIFFICULTY: ${difficultyLevel.toUpperCase()} (${diffDesc})
 DEPTH: ${isInDepth ? 'Comprehensive in-depth mastery' : 'Rapid high-yield review'}
 
 CONTENT & SOURCE MATERIAL:
-${text ? text.slice(0, 10000) : 'Generate comprehensive, curriculum-standard knowledge for this chapter title.'}
+${
+  text && text.trim().length > 10
+    ? text.slice(0, 10000)
+    : 'No textbook text provided. Autonomously research and generate a comprehensive, curriculum-standard syllabus for this topic suited to Grade ' +
+      (grade || 6) +
+      ' at ' +
+      difficultyLevel +
+      ' difficulty.'
+}
 
 REQUIREMENTS:
 1. "map":
@@ -186,18 +212,53 @@ REQUIREMENTS:
    - "oneLineSummary": A crystal-clear 1-sentence hook explaining what this chapter is about.
    - "bigIdea": The single most mind-blowing or fundamental truth the student must remember forever.
    - "bigIdeaEmoji": 1 relevant emoji.
-   - "bigIdeaAnalogy": A vivid, memorable real-world analogy starting with "Think of it like...".
+   - "bigIdeaAnalogy": A DESCRIPTIVE, super-friendly explainer analogy (2 to 3 sentences) written in the simplest, easiest everyday English words. Start with "Think of it like this: Imagine..." and compare it to a familiar daily life experience so any student instantly understands why it works.
    - "learningOutcomes": 3-4 bullet statements of what the student will conquer.
    - "estimatedStudyMinutes": estimated minutes (15 to 35).
+   - "overallDiagram": A step-by-step visual mechanism diagram for the entire chapter.
+     Format: {
+       "type": "cycle" | "flow" | "steps" | "structure",
+       "title": "Clear Diagram Title",
+       "caption": "1-sentence summary of what this diagram illustrates",
+       "steps": [
+         { "label": "Step 1 Name", "desc": "Concise step explanation in simple words", "emoji": "🌱" },
+         { "label": "Step 2 Name", "desc": "Concise step explanation in simple words", "emoji": "☀️" },
+         { "label": "Step 3 Name", "desc": "Concise step explanation in simple words", "emoji": "💧" },
+         { "label": "Step 4 Name", "desc": "Concise step explanation in simple words", "emoji": "✨" }
+       ]
+     }
+   - "recommendedVideos": 1 to 2 curated educational YouTube video recommendations.
+     Format: [
+       {
+         "title": "Engaging Video Title",
+         "channel": "Crash Course / Khan Academy / SciShow / Ted-Ed",
+         "duration": "8-12 min",
+         "youtubeUrl": "https://www.youtube.com/results?search_query=${encodeURIComponent(
+           title + ' ' + (subject || 'science') + ' lesson'
+         )}",
+         "whyWatch": "1 sentence why this video makes the chapter crystal clear"
+       }
+     ]
    - "branches": Exactly ${branchCount} sequential concept branches. Each branch has:
      - "id": string like "b1"
      - "branchName": clear title
      - "branchEmoji": 1 emoji
-     - "analogy": relatable everyday comparison
-     - "subPoints": 3 to 4 clear, punchy bullet points
+     - "analogy": A DESCRIPTIVE, story-like explainer analogy (2 to 3 sentences) using the EASIEST, simplest English words. Must describe a vivid, familiar everyday scenario (like baking cookies, charging a phone battery, boiling water, riding a bicycle, or a playground swing) and clearly explain HOW and WHY this relates to the mechanism.
+     - "subPoints": 3 to 4 clear, punchy bullet points explaining the core concepts and mechanisms in plain language.
+     - "realLifeExamples": 2 to 3 concrete real-life examples from everyday life (kitchen, playground, human body, gadgets, weather) that prove this concept in action.
+     - "mechanisms": [
+         {
+           "concept": "Core rule or mechanism name",
+           "explanation": "Clear explanation in easy words",
+           "realLifeExample": "Where you see this in daily life right now",
+           "emoji": "🔍"
+         }
+       ]
      - "keyTakeaways": 2 to 3 essential takeaways to memorize
+     - "diagram": (optional but include on at least 1 core branch) a MapDiagram object with 3-4 steps!
+     - "video": (optional) a VideoRecommendation object!
 
-2. "keywords": Exactly ${keywordCount} high-yield vocabulary words.
+2. "keywords": Exactly ${keywordCount} high-yield vocabulary words adapted to ${difficultyLevel} level.
    Each item:
    - "id": string like "k1"
    - "word": vocabulary term
@@ -207,7 +268,7 @@ REQUIREMENTS:
    - "memoryHook": memorable rhyme, mnemonic, or mental picture
    - "spellingTip": breakdown or mnemonic to prevent spelling mistakes
 
-3. "questions": Exactly ${questionCount} active-recall exam questions.
+3. "questions": Exactly ${questionCount} active-recall exam questions matched to ${difficultyLevel} difficulty.
    Include a mix of types: "short-answer", "reasoning", "definition", "diagram".
    Each question has:
    - "id": string like "q1"
@@ -238,7 +299,7 @@ REQUIREMENTS:
   }
 
   // Fallback generator when offline or no API key
-  const fallback = generateFallbackKit(title, subject, grade, text, isInDepth);
+  const fallback = generateFallbackKit(title, subject, grade, difficultyLevel, text, isInDepth);
   res.json(fallback);
 });
 
@@ -574,6 +635,7 @@ function generateFallbackKit(
   title: string,
   subject: string,
   grade: number,
+  difficultyLevel: string = 'standard',
   text: string,
   isInDepth: boolean
 ) {
@@ -592,16 +654,55 @@ function generateFallbackKit(
         `Connect these principles to real-world scenarios`,
       ],
       estimatedStudyMinutes: isInDepth ? 25 : 15,
+      overallDiagram: {
+        type: 'flow',
+        title: `${cleanTitle}: Master Process & Mechanism Flow`,
+        caption: 'Sequential visual progression showing causes, state transformations, and observable results.',
+        steps: [
+          { label: '1. Initial Input', desc: `Underlying elements and environmental conditions initiating ${cleanTitle}.`, emoji: '🌱' },
+          { label: '2. Core Transformation', desc: `The active reaction or mechanical phase driven by governing scientific laws.`, emoji: '⚙️' },
+          { label: '3. Observable Effect', desc: `Measurable outcome or physical changes visible throughout the system.`, emoji: '⚡' },
+          { label: '4. System Equilibrium', desc: `Stabilization, feedback loops, and long-term conservation across the environment.`, emoji: '🌍' },
+        ],
+      },
+      recommendedVideos: [
+        {
+          title: `${cleanTitle} Explained in 10 Minutes`,
+          channel: 'Crash Course / Educational Hub',
+          duration: '9:45',
+          youtubeUrl: `https://www.youtube.com/results?search_query=${encodeURIComponent(cleanTitle + ' ' + (subject || 'science') + ' lesson')}`,
+          whyWatch: `Visual animations and real-world demonstrations of ${cleanTitle} to cement your visual memory before tests.`,
+        },
+        {
+          title: `${cleanTitle} Fast Review & Exam Prep`,
+          channel: 'Khan Academy / Ted-Ed',
+          duration: '6:30',
+          youtubeUrl: `https://www.youtube.com/results?search_query=${encodeURIComponent(cleanTitle + ' review lesson')}`,
+          whyWatch: `Clear step-by-step breakdowns of common exam problems and core vocabulary.`,
+        },
+      ],
       branches: [
         {
           id: 'b1',
           branchName: `Foundations of ${cleanTitle}`,
           branchEmoji: '🌱',
-          analogy: 'Like laying the foundation bricks before building the roof.',
+          analogy: `Imagine building a towering skyscraper out of toy blocks: before adding any high floors, you must lay a completely flat, solid foundation so nothing wobbles. That is what foundational rules do—they provide the basic definitions and ground rules that make everything else work!`,
           subPoints: [
             `Core definitions and background principles governing ${cleanTitle}.`,
-            `Key factors that trigger or influence this phenomenon.`,
-            `Why this concept is essential to ${subject}.`,
+            `Key factors and natural conditions that trigger this phenomenon.`,
+            `Why this concept is essential across everyday ${subject || 'learning'}.`,
+          ],
+          realLifeExamples: [
+            `In your kitchen: when water heats in a kettle, the bubbling starts from basic temperature changes at the base.`,
+            `On a smartphone: battery chemistry starts with simple positive and negative charges moving across terminals.`,
+          ],
+          mechanisms: [
+            {
+              concept: `Initial Condition & Activation`,
+              explanation: `A baseline force or energy difference triggers the initial activity.`,
+              realLifeExample: `Pushing a swing for the very first time to start its rhythm.`,
+              emoji: '🚀',
+            },
           ],
           keyTakeaways: [
             `Foundations establish the vocabulary and laws.`,
@@ -612,26 +713,60 @@ function generateFallbackKit(
           id: 'b2',
           branchName: 'Core Mechanics & Processes',
           branchEmoji: '⚙️',
-          analogy: 'Like the moving gears inside a mechanical clockwork watch.',
+          analogy: `Think of a giant chain reaction of dominoes standing in a row: when the first domino tips over, it passes its energy directly to the next one, and the next, until the whole line moves smoothly. In ${cleanTitle}, each step directly causes the next step without skipping!`,
           subPoints: [
             'Sequential progression from cause to effect.',
             'Crucial reactions, interactions, or structural functions.',
             'How energy, materials, or information flow through the system.',
           ],
+          realLifeExamples: [
+            `Riding a bicycle: pressing the pedal turns the chain, which spins the gear, which spins the back wheel to push you forward.`,
+            `Baking bread: yeast eats sugar, burps tiny pockets of gas, and makes the dough puff up into soft bread in the oven.`,
+          ],
+          mechanisms: [
+            {
+              concept: `Cause-and-Effect Chain`,
+              explanation: `One physical change produces a predictable reaction in the next component.`,
+              realLifeExample: `Squeezing a toothpaste tube pushes the paste forward through the nozzle.`,
+              emoji: '🔄',
+            },
+          ],
           keyTakeaways: [
             'Process flows sequentially from inputs to outputs.',
             'Small changes in conditions lead to observable effects.',
           ],
+          diagram: {
+            type: 'steps',
+            title: 'Mechanical Interaction Breakdown',
+            caption: 'Detailed step-by-step breakdown of the core active mechanism.',
+            steps: [
+              { label: 'Activation', desc: 'Sufficient threshold energy or trigger applied to the system.', emoji: '⚡' },
+              { label: 'Interaction', desc: 'Direct engagement between key components and forces.', emoji: '🔄' },
+              { label: 'Stabilization', desc: 'System reaches a balanced steady-state outcome.', emoji: '✅' },
+            ],
+          },
         },
         {
           id: 'b3',
           branchName: 'Real-World Evidence & Applications',
           branchEmoji: '🌍',
-          analogy: 'Like spotting the rules of physics in action while riding a bicycle.',
+          analogy: `Imagine wearing special detective glasses that let you see invisible air currents, heat waves rising off pavement, or tiny water droplets floating in a cloud. Once you learn ${cleanTitle}, you start spotting it happening all around you in everyday life!`,
           subPoints: [
             'Everyday examples where this concept is clearly visible.',
             'Scientific, historical, or environmental significance.',
             'How scientists or researchers verify these principles.',
+          ],
+          realLifeExamples: [
+            `Steaming bathroom mirrors after a warm shower—a direct example of warm vapor cooling into liquid droplets.`,
+            `A puddle drying on a sunny sidewalk—the water doesn't vanish into nothing, it evaporates into invisible moisture in the air.`,
+          ],
+          mechanisms: [
+            {
+              concept: `Observable Everyday Phenomena`,
+              explanation: `Invisible microscopic actions add up into visible macroscopic effects we can touch, see, and measure.`,
+              realLifeExample: `Fog rolling over morning grass or dew drops on a spider web.`,
+              emoji: '🔍',
+            },
           ],
           keyTakeaways: [
             'Directly observable in natural and human-engineered systems.',
@@ -642,11 +777,14 @@ function generateFallbackKit(
           id: 'b4',
           branchName: 'Summary & Exam Highlights',
           branchEmoji: '🎯',
-          analogy: 'Like a checklist before a big flight to ensure nothing is forgotten.',
+          analogy: `Think of an airline pilot running through a quick laminated checklist before takeoff: checking each instrument one by one ensures a smooth, worry-free flight. This review gives you the exact mental checklist to score top marks on test day!`,
           subPoints: [
             'Most commonly tested questions in school board exams.',
             'Frequent misconceptions students make and how to avoid them.',
             'Quick formula or mental checklist for full marks.',
+          ],
+          realLifeExamples: [
+            `Double-checking your pencil pouch and calculator before walking into the exam hall.`,
           ],
           keyTakeaways: [
             'Always define keywords before explaining mechanisms.',

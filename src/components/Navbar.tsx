@@ -1,22 +1,19 @@
 import React from 'react';
 import {
   BookOpen,
-  Flame,
-  Clock,
   Printer,
   Plus,
   Menu,
-  Sparkles,
   Bell,
   Cpu,
 } from 'lucide-react';
-import { UserStats } from '../types';
+import { UserStats, StudentProfile } from '../types';
 
 interface NavbarProps {
-  stats: UserStats;
+  stats?: UserStats;
   reviewsDueCount: number;
   onOpenAddModal: () => void;
-  onOpenTimerModal: () => void;
+  onOpenTimerModal?: () => void;
   onOpenCheatSheet: () => void;
   onOpenAiSettings: () => void;
   onToggleSidebar: () => void;
@@ -25,20 +22,21 @@ interface NavbarProps {
   activeTimerRemaining?: string;
   hasActiveChapter: boolean;
   aiProvider?: 'gemini' | 'deepseek';
+  activeProfile: StudentProfile | null;
+  onOpenProfileModal: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
-  stats,
   reviewsDueCount,
   onOpenAddModal,
-  onOpenTimerModal,
   onOpenCheatSheet,
   onOpenAiSettings,
   onToggleSidebar,
   onOpenReviews,
-  activeTimerRemaining,
   hasActiveChapter,
   aiProvider = 'gemini',
+  activeProfile,
+  onOpenProfileModal,
 }) => {
   return (
     <header className="sticky top-0 z-30 bg-slate-900 text-white border-b border-slate-800 shadow-md">
@@ -90,41 +88,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           )}
 
-          {/* Streak Badge */}
-          <div
-            className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-800/80 border border-slate-700/80 text-orange-400"
-            title="Daily Study Streak"
-          >
-            <Flame className="w-3.5 h-3.5 text-orange-500 fill-orange-500 animate-bounce" />
-            <span className="font-bold">{stats.streakDays}</span>
-            <span className="text-[10px] text-slate-400 hidden md:inline">day streak</span>
-          </div>
 
-          {/* XP Badge */}
-          <div
-            className="hidden md:flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-800/80 border border-slate-700/80 text-teal-300"
-            title="Total Mastery Experience Points"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-teal-400" />
-            <span className="font-bold">{stats.xp}</span>
-            <span className="text-[10px] text-slate-400">XP</span>
-          </div>
-
-          {/* Focus Timer Button */}
-          <button
-            onClick={onOpenTimerModal}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition ${
-              activeTimerRemaining
-                ? 'bg-teal-500/20 text-teal-300 border-teal-500/40 shadow-sm shadow-teal-500/20'
-                : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700 hover:text-white'
-            }`}
-            title="Focus Pomodoro Timer"
-          >
-            <Clock className="w-3.5 h-3.5" />
-            <span className="font-mono font-semibold">
-              {activeTimerRemaining || 'Timer'}
-            </span>
-          </button>
 
           {/* AI Settings / DeepSeek Button */}
           <button
@@ -153,6 +117,21 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span>Cheat Sheet</span>
             </button>
           )}
+
+          {/* Student Profile Switcher Button */}
+          <button
+            onClick={onOpenProfileModal}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-white border border-slate-700/80 transition cursor-pointer shadow-xs"
+            title={activeProfile ? `Logged in as ${activeProfile.name} (Grade ${activeProfile.grade})` : 'Student Accounts / Switch Profile'}
+          >
+            <span className="text-sm">{activeProfile?.avatarEmoji || '🎓'}</span>
+            <span className="hidden sm:inline max-w-[80px] truncate">{activeProfile?.name || 'Sign In'}</span>
+            {activeProfile?.grade && (
+              <span className="hidden md:inline text-[9px] bg-teal-400 text-slate-950 font-extrabold px-1 py-0.2 rounded-md">
+                Gr {activeProfile.grade}
+              </span>
+            )}
+          </button>
 
           {/* Primary Add Chapter Button */}
           <button

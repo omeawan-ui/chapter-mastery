@@ -13,7 +13,8 @@ import { PrintCheatSheetModal } from './components/PrintCheatSheetModal';
 import { AddChapterModal } from './components/AddChapterModal';
 import { FocusTimerModal } from './components/FocusTimerModal';
 import { AiSettingsModal, AiSettings } from './components/AiSettingsModal';
-import { Chapter, UserStats, SourceItem, RetrievalRecord } from './types';
+import { AuthProfileModal } from './components/AuthProfileModal';
+import { Chapter, UserStats, SourceItem, RetrievalRecord, DifficultyLevel, StudentProfile } from './types';
 import { initialSampleChapters } from './data/sampleChapters';
 import { generateStudyKit, evaluateStudentAnswer } from './services/aiService';
 import { playChimeSound } from './utils/audio';
@@ -27,13 +28,52 @@ import {
   Plus,
   ArrowRight,
   ShieldCheck,
+  Clock,
 } from 'lucide-react';
 
 const STORAGE_KEY_CHAPTERS = 'chapter_mastery_pro_v4';
 const STORAGE_KEY_STATS = 'chapter_mastery_stats_v4';
 const STORAGE_KEY_AI_SETTINGS = 'cms_ai_settings_v4';
+const STORAGE_KEY_PROFILES = 'cms_student_profiles_v5';
+const STORAGE_KEY_ACTIVE_PROFILE_ID = 'cms_active_student_id_v5';
 
 export default function App() {
+  // Student Profiles & Authentication
+  const [profiles, setProfiles] = useState<StudentProfile[]>(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY_PROFILES);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return [
+      {
+        id: 'stud_default_1',
+        name: 'Alex Rivera',
+        grade: 6,
+        phoneNumber: '9876543210',
+        avatarEmoji: '🚀',
+        createdAt: new Date().toISOString(),
+        lastLoginAt: new Date().toISOString(),
+      },
+    ];
+  });
+
+  const [activeProfileId, setActiveProfileId] = useState<string>(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY_ACTIVE_PROFILE_ID);
+      if (stored) return stored;
+    } catch (e) {}
+    return 'stud_default_1';
+  });
+
+  const activeProfile = useMemo(() => {
+    return profiles.find((p) => p.id === activeProfileId) || profiles[0] || null;
+  }, [profiles, activeProfileId]);
+
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+
   // Load chapters from local storage or default sample data
   const [chapters, setChapters] = useState<Chapter[]>(() => {
     try {
@@ -125,6 +165,24 @@ export default function App() {
     }
   }, [aiSettings]);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY_PROFILES, JSON.stringify(profiles));
+    } catch (e) {
+      console.error('Failed to save profiles', e);
+    }
+  }, [profiles]);
+
+  useEffect(() => {
+    try {
+      if (activeProfileId) {
+        localStorage.setItem(STORAGE_KEY_ACTIVE_PROFILE_ID, activeProfileId);
+      }
+    } catch (e) {
+      console.error('Failed to save activeProfileId', e);
+    }
+  }, [activeProfileId]);
+
   // Pomodoro Timer Interval
   useEffect(() => {
     let interval: any = null;
@@ -149,17 +207,24 @@ export default function App() {
     return () => clearInterval(interval);
   }, [isTimerRunning, timerSeconds, timerMode]);
 
+  // Filter chapters for the active student profile (permanent personal library)
+  const studentChapters = useMemo(() => {
+    if (!activeProfile) return chapters;
+    const owned = chapters.filter((c) => !c.studentId || c.studentId === activeProfile.id);
+    return owned.length > 0 ? owned : chapters;
+  }, [chapters, activeProfile]);
+
   // Selected Chapter Object
   const currentChapter = useMemo(() => {
-    return chapters.find((c) => c.id === currentChapterId) || chapters[0] || null;
-  }, [chapters, currentChapterId]);
+    return studentChapters.find((c) => c.id === currentChapterId) || studentChapters[0] || null;
+  }, [studentChapters, currentChapterId]);
 
   // Spaced Repetition Due Count
   const reviewsDueCount = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     let count = 0;
-    chapters.forEach((ch) => {
+    studentChapters.forEach((ch) => {
       (ch.reviewDates || []).forEach((r) => {
         if (!r.done && new Date(r.date).setHours(0, 0, 0, 0) <= today.getTime()) {
           count++;
@@ -167,7 +232,80 @@ export default function App() {
       });
     });
     return count;
-  }, [chapters]);
+  }, [studentChapters]);
+
+  // Profile & Auth Handlers
+  const handleSignUp = (newProfileData: Omit<StudentProfile, 'id' | 'createdAt' | 'lastLoginAt'>) => {
+    const newProfile: StudentProfile = {
+      ...newProfileData,
+      id: `stud_${Date.now()}_${newProfileData.phoneNumber.replace(/\D/g, '')}`,
+      createdAt: new Date().toISOString(),
+      lastLoginAt: new Date().toISOString(),
+    };
+    setProfiles((prev) => [...prev, newProfile]);
+    setActiveProfileId(newProfile.id);
+  };
+
+  const handleLogin = (phoneNumber: string): boolean => {
+    const cleanPhone = phoneNumber.trim().replace(/\D/g, '');
+    const found = profiles.find(
+      (p) => p.phoneNumber.trim().replace(/\D/g, '') === cleanPhone
+    );
+    if (found) {
+      setActiveProfileId(found.id);
+      const studentKits = chapters.filter((c) => !c.studentId || c.studentId === found.id);
+      if (studentKits.length > 0) {
+        setCurrentChapterId(studentKits[0].id);
+      }
+      return true;
+    }
+    return false;
+  };
+
+  const handleSwitchProfile = (profileId: string) => {
+    setActiveProfileId(profileId);
+    const studentKits = chapters.filter((c) => !c.studentId || c.studentId === profileId);
+    if (studentKits.length > 0) {
+      setCurrentChapterId(studentKits[0].id);
+    }
+  };
+
+  const handleExportData = () => {
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      activeProfile,
+      profiles,
+      chapters,
+      stats,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `chapter_mastery_library_${activeProfile?.name || 'student'}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportData = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const data = JSON.parse(event.target?.result as string);
+        if (Array.isArray(data.chapters)) {
+          setChapters(data.chapters);
+        }
+        if (Array.isArray(data.profiles)) {
+          setProfiles(data.profiles);
+        }
+      } catch (err) {
+        console.error('Import failed', err);
+      }
+    };
+    reader.readAsText(file);
+  };
 
   // Timer formatted for Navbar
   const activeTimerRemaining = useMemo(() => {
@@ -389,6 +527,7 @@ export default function App() {
     title: string;
     subject: string;
     grade: number;
+    difficultyLevel: DifficultyLevel;
     examDate?: string;
     text: string;
     depthMode: 'in-depth' | 'on-the-go';
@@ -407,9 +546,11 @@ export default function App() {
       // Update existing
       const updated: Chapter = {
         ...editingChapter,
+        studentId: editingChapter.studentId || activeProfile?.id,
         title: data.title,
         subject: data.subject,
         grade: data.grade,
+        difficultyLevel: data.difficultyLevel,
         examDate: data.examDate,
         text: data.text,
         sources: data.sources,
@@ -422,12 +563,14 @@ export default function App() {
       setCurrentChapterId(updated.id);
       setEditingChapter(null);
     } else {
-      // Create new
+      // Create new permanent study kit for active student profile
       const newCh: Chapter = {
         id: `ch_${Date.now()}`,
+        studentId: activeProfile?.id,
         title: data.title,
         subject: data.subject,
         grade: data.grade,
+        difficultyLevel: data.difficultyLevel,
         examDate: data.examDate,
         dateAdded: now.toISOString(),
         lastStudied: now.toISOString(),
@@ -497,13 +640,15 @@ export default function App() {
         activeTimerRemaining={activeTimerRemaining}
         hasActiveChapter={!!currentChapter}
         aiProvider={aiSettings.provider}
+        activeProfile={activeProfile}
+        onOpenProfileModal={() => setIsProfileModalOpen(true)}
       />
 
       {/* Main Layout */}
       <div className="flex-1 flex overflow-hidden">
         {/* Left Sidebar */}
         <Sidebar
-          chapters={chapters}
+          chapters={studentChapters}
           currentChapterId={currentChapterId}
           onSelectChapter={(id) => {
             setCurrentChapterId(id);
@@ -516,6 +661,11 @@ export default function App() {
           onDeleteChapter={handleDeleteChapter}
           isOpen={isSidebarOpen}
           onClose={() => setIsSidebarOpen(false)}
+          activeProfile={activeProfile}
+          onOpenProfileModal={() => setIsProfileModalOpen(true)}
+          stats={stats}
+          onOpenTimerModal={() => setIsTimerModalOpen(true)}
+          activeTimerRemaining={activeTimerRemaining}
         />
 
         {/* Center Content View */}
@@ -654,6 +804,37 @@ export default function App() {
         settings={aiSettings}
         onSaveSettings={setAiSettings}
       />
+
+      <AuthProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        profiles={profiles}
+        activeProfile={activeProfile}
+        onSignUp={handleSignUp}
+        onLogin={handleLogin}
+        onSwitchProfile={handleSwitchProfile}
+        onExportData={handleExportData}
+        onImportData={handleImportData}
+        totalKitsForActiveProfile={studentChapters.length}
+      />
+
+      {/* Floating Active Focus Countdown (only visible when timer is running) */}
+      {isTimerRunning && (
+        <button
+          type="button"
+          onClick={() => setIsTimerModalOpen(true)}
+          className="fixed bottom-4 right-4 z-40 flex items-center gap-2 px-3.5 py-2 bg-slate-900/95 hover:bg-slate-900 text-white rounded-full shadow-xl border border-teal-500/50 hover:border-teal-400 transition cursor-pointer backdrop-blur-xs group"
+          title="Pomodoro Focus Timer Running - Click to manage"
+        >
+          <Clock className="w-4 h-4 text-teal-400 animate-spin" style={{ animationDuration: '6s' }} />
+          <span className="font-mono text-xs font-bold tracking-tight text-teal-300">
+            {activeTimerRemaining}
+          </span>
+          <span className="text-[10px] text-slate-400 group-hover:text-slate-200">
+            {timerMode === 'focus' ? 'Focusing' : 'Break'}
+          </span>
+        </button>
+      )}
     </div>
   );
 }
