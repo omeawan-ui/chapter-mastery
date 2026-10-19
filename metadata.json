@@ -1,0 +1,6 @@
+{
+  "name": "Chapter Mastery Kit Pro",
+  "description": "The intelligent chapter mastery system for students — featuring visual advance organizer maps, interactive flashcards, active recall questions with AI scoring, multi-format quizzes, and a supportive Socratic coach.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
