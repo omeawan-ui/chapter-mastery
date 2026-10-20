@@ -38,10 +38,20 @@ export interface BranchMechanism {
   emoji?: string;
 }
 
+export interface BranchMicroCheck {
+  id?: string;
+  question: string;
+  options: string[];
+  correctIndex: number;
+  explanation: string;
+  hint?: string;
+}
+
 export interface MapBranch {
   id: string;
   branchName: string;
   branchEmoji: string;
+  curiosityHook?: string; // Curiosity hook mystery/question before academic heading (e.g. "Why does your cold soda glass sweat?")
   analogy: string; // Descriptive, friendly explainer in simple plain English
   subPoints: string[];
   realLifeExamples?: string[]; // Concrete daily life examples (kitchen, playground, bike, body, nature)
@@ -49,6 +59,7 @@ export interface MapBranch {
   keyTakeaways: string[];
   diagram?: MapDiagram;
   video?: VideoRecommendation;
+  microCheck?: BranchMicroCheck; // Single, low-stakes exam question to unlock next stepping stone
 }
 
 export interface ChapterMap {

@@ -74,6 +74,14 @@ export const initialSampleChapters: Chapter[] = [
           id: 'b1',
           branchName: 'The Solar Engine & Evaporation',
           branchEmoji: '☀️',
+          curiosityHook: 'Why do puddles disappear on sunny afternoons?',
+          microCheck: {
+            question: 'Which energy source powers evaporation from Earth’s oceans and lakes?',
+            options: ['The Moon', 'The Sun', 'Wind Turbines', 'Earth’s Core'],
+            correctIndex: 1,
+            explanation: 'Solar thermal radiation from the Sun heats water molecules until they break bonds and lift as invisible vapor.',
+            hint: 'Look up in the sky on a hot afternoon! What warms the surface of water and sidewalks?',
+          },
           analogy: 'Imagine you leave a shallow bowl of water out on your front porch on a hot, sunny afternoon. By evening, the bowl is completely dry, even though nobody spilled a drop! The bright sun gave the water molecules so much heat energy that they broke free and floated up into the air as invisible gas. That exact same magic happens every minute across our massive oceans!',
           subPoints: [
             'Solar thermal radiation heats surface water molecules in oceans, rivers, and lakes.',
@@ -115,6 +123,14 @@ export const initialSampleChapters: Chapter[] = [
           id: 'b2',
           branchName: 'Transpiration from Plants',
           branchEmoji: '🌿',
+          curiosityHook: 'How do giant trees drink gallons without a mouth?',
+          microCheck: {
+            question: 'Through which microscopic leaf pores do plants release water vapor into the air?',
+            options: ['Bark cracks', 'Stomata', 'Chloroplast vessels', 'Root cap hairs'],
+            correctIndex: 1,
+            explanation: 'Stomata are microscopic pores on leaf undersides that open to release water vapor and take in carbon dioxide.',
+            hint: 'Remember the word that sounds like "mouths" on leaves that breathe out moisture!',
+          },
           analogy: 'Think of a tall leafy tree like a gigantic drinking straw! Its deep roots suck cool water from underground soil, pulling it up through the trunk. When the leaves open tiny microscopic windows called stomata to catch sunlight, extra water vapor gently slips out into the sky like plant breathing.',
           subPoints: [
             'Roots absorb water and dissolved soil minerals, transporting them up stems via xylem vessels.',
@@ -145,6 +161,19 @@ export const initialSampleChapters: Chapter[] = [
           id: 'b3',
           branchName: 'Condensation & Cloud Birth',
           branchEmoji: '☁️',
+          curiosityHook: 'Why does your cold soda glass sweat?',
+          microCheck: {
+            question: 'When cold water droplets form on the outside of an icy drink, what actually happened?',
+            options: [
+              'Liquid soda seeped through tiny microscopic holes in the glass',
+              'Warm invisible water vapor in the room chilled on the cold glass and turned into liquid',
+              'Ice inside melted straight through the glass wall',
+              'The glass generated water from room lighting'
+            ],
+            correctIndex: 1,
+            explanation: 'Invisible water vapor in the room air contacts the icy cold glass, cools down to its dew point, and condenses into liquid droplets.',
+            hint: 'The glass has zero holes! The water comes from invisible moisture already floating in the room air.',
+          },
           analogy: 'Imagine drinking an ice-cold can of soda on a hot, humid summer day: within seconds, shiny beads of cold water appear on the outside of the can, even though the metal can has zero holes! That is warm, invisible water vapor in the air bumping into the chilly can and instantly shivering back into liquid drops. High in the cold sky, this exact process turns vapor into fluffy white clouds!',
           subPoints: [
             'Warm, low-density air carrying water vapor rises into higher atmospheric layers where pressure and temperature drop.',
@@ -175,6 +204,19 @@ export const initialSampleChapters: Chapter[] = [
           id: 'b4',
           branchName: 'Precipitation & Gravity',
           branchEmoji: '🌧️',
+          curiosityHook: 'Why can’t heavy clouds hold their water forever?',
+          microCheck: {
+            question: 'What causes cloud droplets to finally fall to Earth as precipitation (rain or snow)?',
+            options: [
+              'Clouds run out of sunlight',
+              'Tiny droplets merge into heavy drops until gravity pulls them down through updrafts',
+              'Strong winds blow all the clouds apart',
+              'The sky runs out of air pressure'
+            ],
+            correctIndex: 1,
+            explanation: 'Coalescence makes cloud droplets merge into heavy drops that gravity pulls down to Earth.',
+            hint: 'Think of a heavy soaked sponge that can no longer hold another drop against gravity!',
+          },
           analogy: 'Think of holding a dry kitchen sponge while someone slowly adds water to it with an eye-dropper. At first, the sponge easily holds every drop. But as more water gathers, the sponge gets heavier and heavier until it simply cannot hold another drop—and water starts dripping down! Inside a cloud, tiny drops merge together until they are too heavy for the rising air currents, and gravity pulls them down to earth as rain!',
           subPoints: [
             'Inside turbulent clouds, droplets bump into each other (coalescence) and merge into larger, heavier drops.',
@@ -205,6 +247,19 @@ export const initialSampleChapters: Chapter[] = [
           id: 'b5',
           branchName: 'Collection, Runoff & Underground Aquifers',
           branchEmoji: '🏞️',
+          curiosityHook: 'Where does all the rainwater go when it sinks into the dirt?',
+          microCheck: {
+            question: 'What do we call the process where rainwater soaks deep downward into underground aquifers?',
+            options: [
+              'Evaporation',
+              'Infiltration',
+              'Condensation',
+              'Sublimation'
+            ],
+            correctIndex: 1,
+            explanation: 'Infiltration allows water to soak downward into soil and porous rock, replenishing natural underground aquifers.',
+            hint: 'Think of water "filtering in" into the ground!',
+          },
           analogy: 'Imagine spilling water on a sloping driveway next to a grassy lawn: part of the water races down the concrete into the street gutter, while the rest sinks deeply into the soft soil and grassroots like water into a giant hidden sponge! That is how rainwater either runs off into rivers or recharges deep underground water wells that whole towns drink from.',
           subPoints: [
             'Surface runoff travels over land surfaces into creeks, rivers, and ultimately returns to seas.',

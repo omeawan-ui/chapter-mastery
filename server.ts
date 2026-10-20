@@ -243,6 +243,8 @@ REQUIREMENTS:
      - "id": string like "b1"
      - "branchName": clear title
      - "branchEmoji": 1 emoji
+     - "curiosityHook": A compelling everyday question or mystery (e.g. "Why does your cold soda glass sweat?", "Why do puddles disappear on sunny afternoons?") that sparks curiosity BEFORE introducing academic terminology.
+     - "microCheck": A single, low-stakes exam multiple-choice check to verify comprehension and unlock the next stepping stone. Format: { "question": "Clear question", "options": ["Option 1", "Option 2", "Option 3", "Option 4"], "correctIndex": 0, "explanation": "Exam-aligned explanation in plain words", "hint": "Gentle clue for Coach Sparky" }
      - "analogy": A DESCRIPTIVE, story-like explainer analogy (2 to 3 sentences) using the EASIEST, simplest English words. Must describe a vivid, familiar everyday scenario (like baking cookies, charging a phone battery, boiling water, riding a bicycle, or a playground swing) and clearly explain HOW and WHY this relates to the mechanism.
      - "subPoints": 3 to 4 clear, punchy bullet points explaining the core concepts and mechanisms in plain language.
      - "realLifeExamples": 2 to 3 concrete real-life examples from everyday life (kitchen, playground, human body, gadgets, weather) that prove this concept in action.

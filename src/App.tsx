@@ -522,6 +522,25 @@ export default function App() {
     );
   };
 
+  // Add XP from map micro-checks and learning milestones
+  const handleAddXp = (amount: number, _reason?: string) => {
+    setStats((prev) => ({ ...prev, xp: prev.xp + amount }));
+    if (currentChapter) {
+      setChapters((prev) =>
+        prev.map((c) =>
+          c.id === currentChapter.id
+            ? {
+                ...c,
+                xpEarned: (c.xpEarned || 0) + amount,
+                masteryScore: Math.min(100, (c.masteryScore || 10) + 2),
+                lastStudied: new Date().toISOString(),
+              }
+            : c
+        )
+      );
+    }
+  };
+
   // Generate / Create / Edit Chapter
   const handleGenerateChapter = async (data: {
     title: string;
@@ -690,7 +709,9 @@ export default function App() {
                 {activeTab === 'map' && (
                   <VisualMapTab
                     map={currentChapter.map}
+                    chapterId={currentChapter.id}
                     onGoToRetrievalTab={() => setActiveTab('retrieval')}
+                    onAddXp={handleAddXp}
                   />
                 )}
                 {activeTab === 'retrieval' && (
